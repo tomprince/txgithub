@@ -1,31 +1,28 @@
 #! /usr/bin/env python
 
-import json
-import urllib2
-import base64
 import getpass
 import readline
 assert readline # here for side-effects
 
-def main():
-    username = raw_input("github username: ")
-    password = getpass.getpass("github password: ")
+from twisted.internet import reactor
+from twisted.python import log
 
-    raw = "%s:%s" % (username, password)
-    encoded = base64.b64encode(raw).strip()
-    headers = { 'Authorization' : 'Basic ' + encoded }
+from txgithub import token
 
-    postData = json.dumps(dict(
-        note = 'Highscore',
-        note_url = 'https://github.com/djmitche/highscore',
-        scopes = 'public_repo',
-    ))
-    req = urllib2.Request('https://api.github.com/authorizations',
-            data=postData,
-            headers=headers)
-    fp = urllib2.urlopen(req)
-    result = json.load(fp)
-    token = result['token']
+def printToken(token):
     print("oauth2_token=%r" % (token,))
 
-main()
+def main(username, password):
+    d = token.getToken(username, password,
+            note="Highscore", note_url='https://github.com/djmitche/highscore',
+            scopes = [ 'public_repo' ]
+            )
+    d.addCallback(printToken)
+    d.addErrback(log.err)
+    d.addBoth(lambda _: reactor.stop())
+    return d
+
+username = raw_input("github username: ")
+password = getpass.getpass("github password: ")
+reactor.callWhenRunning(main, username, password)
+reactor.run()
