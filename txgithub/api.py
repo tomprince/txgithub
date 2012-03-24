@@ -19,15 +19,15 @@ from twisted.python import log
 from twisted.internet import defer, ssl, reactor
 from twisted.web import client
 
-class GithubPageGetter(client.HTTPPageGetter):
+class _GithubPageGetter(client.HTTPPageGetter):
 
     def handleStatus_204(self):
         # github returns 204 for e.g., DELETE operations
         self.handleStatus_200()
 
-class GithubHTTPClientFactory(client.HTTPClientFactory):
+class _GithubHTTPClientFactory(client.HTTPClientFactory):
 
-    protocol = GithubPageGetter
+    protocol = _GithubPageGetter
 
     # dont' log about starting and stopping
     noisy = False
@@ -62,7 +62,7 @@ class GithubApi(object):
             postdata = json.dumps(post)
 
         log.msg("fetching '%s'" % (url,), system='github')
-        factory = GithubHTTPClientFactory(url, headers=headers,
+        factory = _GithubHTTPClientFactory(url, headers=headers,
                     postdata=postdata, method=method,
                     agent='txgithub', followRedirect=0,
                     timeout=30)
