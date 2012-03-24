@@ -111,6 +111,13 @@ class GithubApi(object):
             self._repos = ReposEndpoint(self)
         return self._repos
 
+    _gists = None
+    @property
+    def gists(self):
+        if not self._gists:
+            self._gists = GistsEndpoint(self)
+        return self._gists
+
 
 class BaseEndpoint(object):
 
@@ -160,3 +167,13 @@ class ReposEndpoint(BaseEndpoint):
         return self.api.makeRequest(
             ['repos', repo_user, repo_name, 'hooks', str(id)],
             method='DELETE')
+
+class GistsEndpoint(BaseEndpoint):
+    def create(self, files, description=None, public=True):
+        data = { 'files': files, 'public': bool(public) }
+        if description is not None:
+            data['description'] = description
+        return self.api.makeRequest(
+                ['gists'],
+                method='POST',
+                post=data)
