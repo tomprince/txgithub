@@ -1,9 +1,11 @@
+import os
 import json
 import base64
 
 from twisted.web import client
+from twisted.internet import utils
 
-def getToken(username, password,
+def createToken(username, password,
                 note, note_url,
                 scopes):
     raw = "%s:%s" % (username, password)
@@ -25,4 +27,10 @@ def getToken(username, password,
     def extractToken(res):
         result = json.loads(res)
         return result['token']
+    return d
+
+
+def getToken():
+    d = utils.getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
+    d.addCallback(str.strip)
     return d

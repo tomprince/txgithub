@@ -14,6 +14,7 @@
 # Copyright Buildbot Team Members
 
 from distutils.core import setup
+import setuptools
 
 setup(
     name='txgithub',
@@ -21,9 +22,11 @@ setup(
     description='github API client',
     author='Tom Prince',
     author_email='tom.prince@ualberta.net',
-    packages=['txgithub'],
+    packages=['txgithub', 'txgithub.scripts'],
+    scripts=['bin/gist', 'bin/get-github-token'],
     install_requires=[
         'twisted >= 12.3.0',
         'pyopenssl',
     ],
+    zip_safe=False,
 )

@@ -16,7 +16,7 @@
 import re
 import json
 from twisted.python import log
-from twisted.internet import defer, ssl, reactor
+from twisted.internet import defer, ssl
 from twisted.web import client
 
 class _GithubPageGetter(client.HTTPPageGetter):
@@ -66,6 +66,7 @@ class GithubApi(object):
                     postdata=postdata, method=method,
                     agent='txgithub', followRedirect=0,
                     timeout=30)
+        from twisted.internet import reactor
         reactor.connectSSL('api.github.com', 443, factory,
                            self.contextFactory)
         d = factory.deferred
