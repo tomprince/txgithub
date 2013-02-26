@@ -158,16 +158,111 @@ class ReposEndpoint(BaseEndpoint):
         return self.api.makeRequestAllPages(
             ['repos', repo_user, repo_name, 'hooks'])
 
+    def getHook(self, repo_user, repo_name, hook_id):
+        """
+        GET /repos/:owner/:repo/hooks/:id
+
+        Returns the Hook.
+        """
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'hooks', str(hook_id)],
+            method='GET',
+            )
+
     def createHook(self, repo_user, repo_name, name, config, events, active):
         return self.api.makeRequest(
             ['repos', repo_user, repo_name, 'hooks'],
             method='POST',
             post=dict(name=name, config=config, events=events, active=active))
 
+    def editHook(self, repo_user, repo_name, hook_id, name, config,
+            events=None, add_events=None, remove_events=None, active=None):
+        """
+        PATCH /repos/:owner/:repo/hooks/:id
+
+        :param hook_id: Id of the hook.
+        :param name:  The name of the service that is being called.
+        :param config: A Hash containing key/value pairs to provide settings
+                       for this hook.
+        """
+        post = dict(
+                name=name,
+                config=config,
+                )
+        if events is not None:
+            post['events'] = events
+
+        if add_events is not None:
+            post['add_events'] = add_events
+
+        if remove_events is not None:
+            post['remove_events'] = remove_events
+
+        if active is not None:
+            post['active'] = active
+
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'hooks', str(hook_id)],
+            method='PATCH',
+            post=post,
+            )
+
+    def testHook(self, repo_user, repo_name, hook_id):
+        """
+        POST /repos/:owner/:repo/hooks/:id/tests
+
+        Response headers:
+            Status: 204 No Content
+            X-RateLimit-Limit: 5000
+            X-RateLimit-Remaining: 4999
+        Response content:
+            None
+        """
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'hooks', str(hook_id), 'tests'],
+            method='POST',
+            )
+
     def deleteHook(self, repo_user, repo_name, id):
         return self.api.makeRequest(
             ['repos', repo_user, repo_name, 'hooks', str(id)],
             method='DELETE')
+
+    def getStatuses(self, repo_user, repo_name, sha):
+        """
+        :param sha: Full sha to list the statuses from.
+        :return: A defered with the result from GitHub.
+        """
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'statuses', sha],
+            method='GET')
+
+    def createStatus(self,
+            repo_user, repo_name, sha, state, target_url=None,
+            description=None):
+        """
+        :param sha: Full sha to create the status for.
+        :param state: one of the following 'pending', 'success', 'error'
+                      or 'failure'.
+        :param target_url: Target url to associate with this status.
+        :param description: Short description of the status.
+        :return: A defered with the result from GitHub.
+        """
+        if description is None:
+            description = state
+
+        if target_url is None:
+            target_url = 'http://developer.github.com/v3/repos/statuses/'
+
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'statuses', sha],
+            method='POST',
+            post=dict(
+                state=state,
+                target_url=target_url,
+                description=description,
+                ))
+
 
 class GistsEndpoint(BaseEndpoint):
     def create(self, files, description=None, public=True):

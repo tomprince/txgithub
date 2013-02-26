@@ -1,1 +1,2 @@
-*.pyc
+*.py[c|o]
+_trial_temp/
