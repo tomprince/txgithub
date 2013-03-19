@@ -18,7 +18,7 @@ import setuptools
 
 setup(
     name='txgithub',
-    version='0.0',
+    version='0.1.0',
     description='github API client',
     author='Tom Prince',
     author_email='tom.prince@ualberta.net',
