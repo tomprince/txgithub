@@ -14,7 +14,6 @@
 # Copyright Buildbot Team Members
 
 from distutils.core import setup
-import setuptools
 
 setup(
     name='txgithub',
@@ -25,7 +24,7 @@ setup(
     author_email='tom.prince@ualberta.net',
     url='https://github.com/tomprince/txgithub',
     platforms='any',
-    license='GPLv2',
+    license='MIT',
     packages=['txgithub', 'txgithub.scripts'],
     scripts=['bin/gist', 'bin/get-github-token'],
     install_requires=[
