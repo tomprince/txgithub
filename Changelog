@@ -1,0 +1,10 @@
+Changelog for txgitub
+=====================
+
+
+0.1.0 2013-03-13
+----------------
+
+* Allow repository status management.
+* Allow repository hook management.
+* Initial release.

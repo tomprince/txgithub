@@ -1,2 +1,5 @@
 *.py[c|o]
 _trial_temp/
+build/
+dist/
+*.egg-info/

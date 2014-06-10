@@ -13,15 +13,18 @@
 #
 # Copyright Buildbot Team Members
 
-from distutils.core import setup
-import setuptools
+from setuptools import setup
 
 setup(
     name='txgithub',
-    version='0.0',
-    description='github API client',
+    version='0.1.0',
+    description='GitHub API client implemented using Twisted.',
+    long_description=open('README.rst').read(),
     author='Tom Prince',
     author_email='tom.prince@ualberta.net',
+    url='https://github.com/tomprince/txgithub',
+    platforms='any',
+    license='MIT',
     packages=['txgithub', 'txgithub.scripts'],
     scripts=['bin/gist', 'bin/get-github-token'],
     install_requires=[
@@ -29,4 +32,15 @@ setup(
         'pyopenssl',
     ],
     zip_safe=False,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Framework :: Twisted',
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Internet :: WWW/HTTP',
+    ],
 )
