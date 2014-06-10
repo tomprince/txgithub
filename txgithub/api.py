@@ -239,7 +239,7 @@ class ReposEndpoint(BaseEndpoint):
 
     def createStatus(self,
             repo_user, repo_name, sha, state, target_url=None,
-            description=None):
+            description=None, context=None):
         """
         :param sha: Full sha to create the status for.
         :param state: one of the following 'pending', 'success', 'error'
@@ -254,14 +254,19 @@ class ReposEndpoint(BaseEndpoint):
         if target_url is None:
             target_url = 'http://developer.github.com/v3/repos/statuses/'
 
+        payload = {
+            'state': state,
+            'target_url': target_url,
+            'description': description,
+            }
+
+        if context is not None:
+            payload['context'] = context
+
         return self.api.makeRequest(
             ['repos', repo_user, repo_name, 'statuses', sha],
             method='POST',
-            post=dict(
-                state=state,
-                target_url=target_url,
-                description=description,
-                ))
+            post=payload)
 
 
 class GistsEndpoint(BaseEndpoint):
