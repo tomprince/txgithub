@@ -5,9 +5,15 @@ import base64
 from twisted.web import client
 from twisted.internet import utils
 
+from txgithub.constants import HOSTED_BASE_URL
+
 def createToken(username, password,
                 note, note_url,
-                scopes):
+                scopes, baseURL=None):
+    baseURL = baseURL or HOSTED_BASE_URL
+    if baseURL[-1] != '/':
+        baseURL += '/'
+
     raw = "%s:%s" % (username, password)
     encoded = base64.b64encode(raw).strip()
     headers = { 'Authorization' : 'Basic ' + encoded }
@@ -18,7 +24,7 @@ def createToken(username, password,
         scopes = scopes,
         ))
     d = client.getPage(
-            url='https://api.github.com/authorizations',
+            url='%sauthorizations' % baseURL,
             method='POST',
             postdata=postData,
             headers=headers

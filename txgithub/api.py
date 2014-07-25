@@ -19,6 +19,8 @@ from twisted.python import log
 from twisted.internet import defer, ssl
 from twisted.web import client
 
+from txgithub.constants import HOSTED_BASE_URL
+
 class _GithubPageGetter(client.HTTPPageGetter):
 
     def handleStatus_204(self):
@@ -38,9 +40,8 @@ class GithubApi(object):
     # - optional user/pass auth (token is not available with v3)
     # - async API
 
-    BASE_URL = 'https://api.github.com/'
-
-    def __init__(self, oauth2_token):
+    def __init__(self, oauth2_token, baseURL=None):
+        self._baseURL = baseURL or HOSTED_BASE_URL
         self.oauth2_token = oauth2_token
         self.rateLimitWarningIssued = False
         self.contextFactory = ssl.ClientContextFactory()
@@ -52,7 +53,7 @@ class GithubApi(object):
     def makeRequest(self, url_args, post=None, method='GET', page=0):
         headers = self._makeHeaders()
 
-        url = self.BASE_URL
+        url = self._baseURL
         url += '/'.join(url_args)
         if page:
             url += "?page=%d" % page
@@ -67,7 +68,7 @@ class GithubApi(object):
                     agent='txgithub', followRedirect=0,
                     timeout=30)
         from twisted.internet import reactor
-        reactor.connectSSL('api.github.com', 443, factory,
+        reactor.connectSSL(factory.host, factory.port, factory,
                            self.contextFactory)
         d = factory.deferred
         @d.addCallback
