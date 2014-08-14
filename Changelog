@@ -1,6 +1,11 @@
 Changelog for txgitub
 =====================
 
+0.2.0 2014-08-14
+----------------
+
+* Allow using a custom base URL to support private instances.
+
 
 0.1.0 2013-03-13
 ----------------
