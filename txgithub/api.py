@@ -252,14 +252,14 @@ class ReposEndpoint(BaseEndpoint):
         if description is None:
             description = state
 
-        if target_url is None:
-            target_url = 'http://developer.github.com/v3/repos/statuses/'
 
-        payload = {
-            'state': state,
-            'target_url': target_url,
-            'description': description,
-            }
+        payload = {'state': state}
+
+        if description is not None:
+            payload['description'] = description
+
+        if target_url is not None:
+            payload['target_url'] = target_url
 
         if context is not None:
             payload['context'] = context
