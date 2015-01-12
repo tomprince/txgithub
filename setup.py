@@ -17,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='txgithub',
-    version='0.2.0',
+    version='15.0.0',
     description='GitHub API client implemented using Twisted.',
     long_description=open('README.rst').read(),
     author='Tom Prince',

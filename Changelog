@@ -1,6 +1,12 @@
 Changelog for txgitub
 =====================
 
+15.0.0 2015-01-12
+----------------
+
+* Allow specifying a context for commit statuses.
+* Don't provide default description or URL for commit statuses.
+
 0.2.0 2014-08-14
 ----------------
 
