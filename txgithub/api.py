@@ -249,17 +249,13 @@ class ReposEndpoint(BaseEndpoint):
         :param description: Short description of the status.
         :return: A defered with the result from GitHub.
         """
-        if description is None:
-            description = state
+        payload = {'state': state}
 
-        if target_url is None:
-            target_url = 'http://developer.github.com/v3/repos/statuses/'
+        if description is not None:
+            payload['description'] = description
 
-        payload = {
-            'state': state,
-            'target_url': target_url,
-            'description': description,
-            }
+        if target_url is not None:
+            payload['target_url'] = target_url
 
         if context is not None:
             payload['context'] = context
