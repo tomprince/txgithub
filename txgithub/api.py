@@ -249,10 +249,6 @@ class ReposEndpoint(BaseEndpoint):
         :param description: Short description of the status.
         :return: A defered with the result from GitHub.
         """
-        if description is None:
-            description = state
-
-
         payload = {'state': state}
 
         if description is not None:
