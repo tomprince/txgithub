@@ -302,6 +302,9 @@ class PullsEndpoint(BaseEndpoint):
         :param body: The new top-level body for the pull request
         :param state: The new top-level body for the pull request
         """
+        if not any((title, body, state)):
+            raise ValueError("must provide at least one of:"
+                             " title, body, state")
 
         post = {}
         if title is not None:
@@ -327,8 +330,8 @@ class IssueCommentsEndpoint(BaseEndpoint):
         :param issue_number: The issue's (or pull request's) number
         :param body: The body of this comment
         """
-
         return self.api.makeRequest(
-            ['repos', repo_user, repo_name, 'issues', issue_number, 'comments'],
+            ['repos', repo_user, repo_name,
+             'issues', issue_number, 'comments'],
             method='POST',
             post=dict(body=body))
