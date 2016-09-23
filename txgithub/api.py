@@ -120,6 +120,20 @@ class GithubApi(object):
             self._gists = GistsEndpoint(self)
         return self._gists
 
+    _pulls = None
+    @property
+    def pulls(self):
+        if not self._pulls:
+            self._pulls = PullsEndpoint(self)
+        return self._pulls
+
+    _comments = None
+    @property
+    def comments(self):
+        if not self._comments:
+            self._comments = IssueCommentsEndpoint(self)
+        return self._comments
+
 
 class BaseEndpoint(object):
 
@@ -275,3 +289,49 @@ class GistsEndpoint(BaseEndpoint):
                 ['gists'],
                 method='POST',
                 post=data)
+
+
+class PullsEndpoint(BaseEndpoint):
+    def edit(self, repo_user, repo_name, pull_number,
+             title=None, body=None, state=None):
+        """
+        PATCH /repos/:owner/:repo/pulls/:number
+
+        :param pull_number: The pull request's number
+        :param title: The new title for the pull request
+        :param body: The new top-level body for the pull request
+        :param state: The new top-level body for the pull request
+        """
+        if not any((title, body, state)):
+            raise ValueError("must provide at least one of:"
+                             " title, body, state")
+
+        post = {}
+        if title is not None:
+            post['title'] = title
+        if body is not None:
+            post['body'] = body
+        if state is not None:
+            if state not in ('open', 'closed'):
+                raise ValueError("state must be either 'open' or 'closed'")
+            post['state'] = state
+
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name, 'pulls', pull_number],
+            method='PATCH',
+            post=post)
+
+
+class IssueCommentsEndpoint(BaseEndpoint):
+    def create(self, repo_user, repo_name, issue_number, body):
+        """
+        PATCH /repos/:owner/:repo/issues/:number/comments
+
+        :param issue_number: The issue's (or pull request's) number
+        :param body: The body of this comment
+        """
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name,
+             'issues', issue_number, 'comments'],
+            method='POST',
+            post=dict(body=body))

@@ -8,9 +8,11 @@ from twisted.internet.defer import succeed
 from txgithub.api import GithubApi as GitHubAPI
 
 
-class TestReposEndpoint(SynchronousTestCase):
+class _EndpointTestCase(SynchronousTestCase):
     """
-    Unit tests for ReposEndpoint.
+    Common code to for Endpoint tests.
+
+    Establishes request mocker and creates an API object.
     """
 
     def _mock_makeRequest(self, *args, **kwargs):
@@ -22,11 +24,23 @@ class TestReposEndpoint(SynchronousTestCase):
             return succeed({})
 
     def setUp(self):
-        super(TestReposEndpoint, self).setUp()
         self._github_responses = []
         self._github_requests = []
         self.github = GitHubAPI(oauth2_token='fake-token')
         self.github.makeRequest = self._mock_makeRequest
+
+    def assertRequestEqual(self, request, method, post):
+        self.assertEqual(method, request['kwargs']['method'])
+        self.assertEqual(post, request['kwargs']['post'])
+
+
+class TestReposEndpoint(_EndpointTestCase):
+    """
+    Unit tests for ReposEndpoint.
+    """
+
+    def setUp(self):
+        super(TestReposEndpoint, self).setUp()
         self.repos = self.github.repos
 
     def test_getHook_ok(self):
@@ -162,3 +176,113 @@ class TestReposEndpoint(SynchronousTestCase):
         self.assertEqual('http://example.com/',
                          request['kwargs']['post']['target_url'])
         self.assertEqual('test-context', request['kwargs']['post']['context'])
+
+
+class TestPullsEndpoint(_EndpointTestCase):
+    """
+    Unit tests on PullsEndpoint
+    """
+
+    def setUp(self):
+        super(TestPullsEndpoint, self).setUp()
+        self.pulls = self.github.pulls
+
+    def test_edit_fails_when_empty(self):
+        """
+        edit raises a ValueError when no parameters are provided.
+        """
+        with self.assertRaises(ValueError):
+            self.pulls.edit('repo', 'name', 'number')
+
+    def test_edit_title(self):
+        """
+        edit, when given only the title, only updates the title.
+        """
+        d = self.pulls.edit(
+            'repo', 'name', 'number', title='some title')
+
+        self.successResultOf(d)
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='PATCH',
+                                post={'title': 'some title'})
+
+    def test_edit_body(self):
+        """
+        edit, when given only the body, only updates the title.
+        """
+        d = self.pulls.edit(
+            'repo', 'name', 'number', body='some body')
+
+        self.successResultOf(d)
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='PATCH',
+                                post={'body': 'some body'})
+
+    def test_edit_fails_with_bad_state(self):
+        """
+        edit raises a ValueError when given an invalid state
+        """
+        with self.assertRaises(ValueError) as cm:
+            self.pulls.edit(
+                'repo', 'name', 'number', state='blub')
+        self.assertIn('open', cm.exception.message)
+        self.assertIn('closed', cm.exception.message)
+
+    def test_edit_state(self):
+        """
+        edit, when given only the state, only updates the state.
+        """
+        d = self.pulls.edit(
+            'repo', 'name', 'number', state='open')
+
+        self.successResultOf(d)
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='PATCH',
+                                post={'state': 'open'})
+
+    def test_edit_all(self):
+        """
+        edit, when given all parameters, updates all of them.
+        """
+        d = self.pulls.edit(
+            'repo', 'name', 'number',
+            title="some title", body="some body", state="closed")
+
+        self.successResultOf(d)
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='PATCH',
+                                post={'title': 'some title',
+                                      'body': 'some body',
+                                      'state': 'closed'})
+
+
+class TestIssueCommentsEndpoint(_EndpointTestCase):
+    """
+    Unit tests for IssueCommentsEndpoint.
+    """
+
+    def setUp(self):
+        super(TestIssueCommentsEndpoint, self).setUp()
+        self.comments = self.github.comments
+
+    def test_create(self):
+        """
+        create posts the supplied body.
+        """
+        d = self.comments.create('repo', 'name', 'number',
+                                 'some body')
+
+        self.successResultOf(d)
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='POST',
+                                post={'body': 'some body'})
