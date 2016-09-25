@@ -1,0 +1,10 @@
+language: python
+python: 2.7
+install:
+    - pip install coverage codecov .
+
+script:
+    - coverage run --source txgithub --branch -m twisted.trial txgithub
+
+after_success:
+  - codecov

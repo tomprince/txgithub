@@ -13,7 +13,7 @@
 #
 # Copyright Buildbot Team Members
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='txgithub',
@@ -25,7 +25,7 @@ setup(
     url='https://github.com/tomprince/txgithub',
     platforms='any',
     license='MIT',
-    packages=['txgithub', 'txgithub.scripts'],
+    packages=find_packages(),
     scripts=['bin/gist', 'bin/get-github-token'],
     install_requires=[
         'twisted >= 12.3.0',
