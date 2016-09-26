@@ -40,11 +40,14 @@ class GithubApi(object):
     # - optional user/pass auth (token is not available with v3)
     # - async API
 
-    def __init__(self, oauth2_token, baseURL=None):
+    def __init__(self, oauth2_token, baseURL=None, _reactor=None):
         self._baseURL = baseURL or HOSTED_BASE_URL
         self.oauth2_token = oauth2_token
         self.rateLimitWarningIssued = False
         self.contextFactory = ssl.ClientContextFactory()
+        if _reactor is None:
+            from twisted.internet import reactor as _reactor
+        self.reactor = _reactor
 
     def _makeHeaders(self):
         assert self.oauth2_token, "no token specified"
@@ -67,9 +70,9 @@ class GithubApi(object):
                     postdata=postdata, method=method,
                     agent='txgithub', followRedirect=0,
                     timeout=30)
-        from twisted.internet import reactor
-        reactor.connectSSL(factory.host, factory.port, factory,
-                           self.contextFactory)
+
+        self.reactor.connectSSL(factory.host, factory.port, factory,
+                                self.contextFactory)
         d = factory.deferred
         @d.addCallback
         def check_ratelimit(data):
@@ -96,7 +99,7 @@ class GithubApi(object):
             data.extend((yield self.makeRequest(url_args, page=page)))
             if 'link' not in self.last_response_headers:
                 break
-            link_hdr = self.last_response_headers['link']
+            link_hdr = self.last_response_headers['link'][0]
             for link in self.link_re.findall(link_hdr):
                 if link[1] == 'next':
                     # note that we don't *use* the page -- why bother?
