@@ -501,6 +501,61 @@ class TestReposEndpoint(_EndpointTestCase):
         self.assertEqual('test-context', request['kwargs']['post']['context'])
 
 
+class TestGistsEndpoint(_EndpointTestCase):
+    """
+    Tests for L{GistsEndpoint}
+    """
+
+    def setUp(self):
+        super(TestGistsEndpoint, self).setUp()
+        self.gists = self.github.gists
+
+    def test_create(self):
+        """
+        Creating a gist with the default options results in a public
+        gist with no description.
+        """
+        gistFiles = {"something.txt": {"content": "some contents"}}
+
+        self.successResultOf(self.gists.create(files=gistFiles))
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='POST',
+                                post={"files": gistFiles, "public": True})
+
+    def test_create_with_description(self):
+        """
+        A description can be given when creating a gist.
+        """
+        gistFiles = {"something.txt": {"content": "some contents"}}
+
+        self.successResultOf(self.gists.create(files=gistFiles,
+                                               description="a description"))
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='POST',
+                                post={"files": gistFiles,
+                                      "description": "a description",
+                                      "public": True})
+
+    def test_create_private(self):
+        """
+        A private gist can be created.
+        """
+        gistFiles = {"something.txt": {"content": "some contents"}}
+
+        self.successResultOf(self.gists.create(files=gistFiles,
+                                               public=False))
+
+        self.assertEqual(1, len(self._github_requests))
+        self.assertRequestEqual(self._github_requests[0],
+                                method='POST',
+                                post={"files": gistFiles,
+                                      "public": False})
+
+
 class TestPullsEndpoint(_EndpointTestCase):
     """
     Unit tests on PullsEndpoint
