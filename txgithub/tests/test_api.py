@@ -137,10 +137,9 @@ class GithubApiMakeRequestTests(_GithubApiTestCase):
 
     def got_log_event(self, event):
         """
-        A log observer that only records messages, not errors.
+        A log observer that records events' messages.
         """
-        if not event.get('isError', False):
-            self.log_events.append(event['message'])
+        self.log_events.append(event['message'])
 
     def connectSSL_call(self):
         self.assertEqual(len(self.reactor.sslClients), 1)
@@ -366,6 +365,71 @@ class TestReposEndpoint(_EndpointTestCase):
         super(TestReposEndpoint, self).setUp()
         self.repos = self.github.repos
 
+    def test_same_repos_object(self):
+        """
+        The L{ReposEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.repos, self.repos)
+
+    def assert_getEvents_downloads(self, events, expected_events,
+                                   repo_user, repo_name, until_id=None):
+        """
+        Given C{events}, assert all C{expected_events} have been
+        downloaded.  All other args are passed
+        L{ReposEndpoint.getEvents}.
+        """
+        events_iter = iter(events)
+        calls = []
+
+        def fake_makeRequest(path, page):
+            calls.append((path, page))
+            event = next(events_iter, None)
+            return succeed([] if event is None else [event])
+
+        self.github.makeRequest = fake_makeRequest
+        data = self.successResultOf(self.repos.getEvents(
+            repo_user, repo_name, until_id))
+
+        self.assertEqual(calls, [
+            (["repos", repo_user, repo_name, "events"], i)
+            for i in range(len(expected_events) + 1)])
+        self.assertEqual(data, expected_events)
+
+    def test_getEvents_ok(self):
+        """
+        By default all events are downloaded and returned.
+        """
+        events = [{"id": 1}, {"id": 2}, {"id": 3}]
+        expected_events = events
+        self.assert_getEvents_downloads(events, expected_events,
+                                        "user", "repo")
+
+    def test_getEvents_until_id(self):
+        """
+        Only events before C{until_id} are downloaded
+        """
+        events = [{"id": 1}, {"id": 2}, {"id": 3}]
+        expected_events = [{"id": 1}]
+        self.assert_getEvents_downloads(events, expected_events,
+                                        "user", "repo", until_id=2)
+
+    def test_getHooks_ok(self):
+        """
+        L{GithubApi.getHooks} returns all hooks
+        """
+        makeRequestAllPages_returns = "makeRequestAllPages"
+        calls = []
+
+        def fake_makeRequestAllPages(path):
+            calls.append(path)
+            return makeRequestAllPages_returns
+
+        self.github.makeRequestAllPages = fake_makeRequestAllPages
+
+        self.assertIs(self.repos.getHooks("user", "name"),
+                      makeRequestAllPages_returns)
+        self.assertEqual(calls, [["repos", "user", "name", "hooks"]])
+
     def test_getHook_ok(self):
         """
         getHook return the info for a single hook.
@@ -401,6 +465,32 @@ class TestReposEndpoint(_EndpointTestCase):
             request['args'][0])
         self.assertEqual(
             {
+                'config': {'content_type': 'json', 'url': 'some_url'},
+                'name': 'web',
+            },
+            request['kwargs']['post'])
+
+    def test_createHook_ok(self):
+        """
+        L{GithubApi.createHook} creates a hook according to the
+        specification.
+        """
+        config = {'url': 'some_url', 'content_type': 'json'}
+        self.repos.createHook("user", "repo",
+                              name="web",
+                              config=config,
+                              events=["push"],
+                              active=True)
+
+        request = self._github_requests[0]
+        self.assertEqual(
+            ['repos', 'user', 'repo', 'hooks'],
+            request['args'][0])
+        self.assertEqual(
+            {
+                'name': 'web',
+                'active': True,
+                'events': ['push'],
                 'config': {'content_type': 'json', 'url': 'some_url'},
                 'name': 'web',
             },
@@ -446,6 +536,18 @@ class TestReposEndpoint(_EndpointTestCase):
         self.assertEqual('POST', request['kwargs']['method'])
         self.assertEqual(
             ['repos', 'repo', 'name', 'hooks', '123', 'tests'],
+            request['args'][0])
+
+    def test_deleteHook_ok(self):
+        """
+        L{GithubApi.deleteHook} deletes the specified hook.
+        """
+        self.repos.deleteHook("user", "repo", 123)
+
+        request = self._github_requests[0]
+        self.assertEqual('DELETE', request['kwargs']['method'])
+        self.assertEqual(
+            ['repos', 'user', 'repo', 'hooks', '123'],
             request['args'][0])
 
     def test_getStatuses_ok(self):
@@ -510,6 +612,12 @@ class TestGistsEndpoint(_EndpointTestCase):
         super(TestGistsEndpoint, self).setUp()
         self.gists = self.github.gists
 
+    def test_same_gists_object(self):
+        """
+        The L{GistsEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.gists, self.gists)
+
     def test_create(self):
         """
         Creating a gist with the default options results in a public
@@ -564,6 +672,12 @@ class TestPullsEndpoint(_EndpointTestCase):
     def setUp(self):
         super(TestPullsEndpoint, self).setUp()
         self.pulls = self.github.pulls
+
+    def test_same_pulls_object(self):
+        """
+        The L{PullsEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.pulls, self.pulls)
 
     def test_edit_fails_when_empty(self):
         """
@@ -650,6 +764,12 @@ class TestIssueCommentsEndpoint(_EndpointTestCase):
     def setUp(self):
         super(TestIssueCommentsEndpoint, self).setUp()
         self.comments = self.github.comments
+
+    def test_same_comments_object(self):
+        """
+        The L{PullsEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.comments, self.comments)
 
     def test_create(self):
         """
