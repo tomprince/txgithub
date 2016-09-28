@@ -8,15 +8,20 @@ from twisted.internet.defer import Deferred
 
 from txgithub.scripts import create_token
 
+from . _options import (_OptionsTestCaseMixin,
+                        _FakeOptionsTestCaseMixin,
+                        _FakePrintTestCaseMixin,
+                        _FakeSystemExitTestCaseMixin,
+                        _SystemExit)
 
-class OptionsTestCase(SynchronousTestCase):
+
+class OptionsTestCase(_OptionsTestCaseMixin):
     """
     Tests for L{create_token.Options}
     """
-
-    def setUp(self):
-        self.username = "username"
-        self.config = create_token.Options()
+    username = "username"
+    required_args = (username,)
+    options_factory = create_token.Options
 
     def test_username_argument(self):
         """
@@ -25,15 +30,6 @@ class OptionsTestCase(SynchronousTestCase):
         username = self.username
         self.config.parseOptions([self.username])
         self.assertEqual(self.config['username'], username)
-
-    def assert_option(self, option_inputs, option_name, expected_value):
-        """
-        Assert that the input C{option_inputs} is parsed into
-        C{expected_value} and available in C{self.config} under
-        C{option_name}.
-        """
-        self.config.parseOptions(option_inputs + [self.username])
-        self.assertEqual(self.config[option_name], expected_value)
 
     def test_note_ok(self):
         """
@@ -165,51 +161,17 @@ class CreateTokenTests(SynchronousTestCase):
         self.assertEqual(self.print_calls, [("token",)])
 
 
-class _FakeOptionsRecorder(object):
-    """
-    Records actions on L{_FakeOptions}
-    """
-
-    def __init__(self):
-        self.parseOptions_calls = []
-        self.parseOptions_raises = None
-
-
-class _FakeOptions(dict):
-    """
-    A fake L{Options} implementation.
-    """
-
-    def __init__(self, recorder):
-        self._recorder = recorder
-
-    def parseOptions(self, argv):
-        self._recorder.parseOptions_calls.append(argv)
-        if self._recorder.parseOptions_raises:
-            raise self._recorder.parseOptions_raises
-
-
-class _SystemExit(Exception):
-    """
-    A fake L{SystemExit}.
-    """
-
-
-class RunTests(SynchronousTestCase):
+class RunTests(_FakeOptionsTestCaseMixin,
+               _FakeSystemExitTestCaseMixin,
+               _FakePrintTestCaseMixin):
     """
     Tests for L{txgithub.scripts.create_token.run}.
     """
 
     def setUp(self):
-        self.argv0 = "argv0"
-
-        self.recorder = _FakeOptionsRecorder()
-        self.options = _FakeOptions(self.recorder)
-
+        super(RunTests, self).setUp()
         self.createToken_calls = []
         self.createToken_returns = "create token returns"
-        self.print_calls = []
-        self.exit_calls = []
         self.getpass_calls = []
         self.getpass_returns = None
 
@@ -227,19 +189,6 @@ class RunTests(SynchronousTestCase):
         self.createToken_calls.append(kwargs)
         return self.createToken_returns
 
-    def fake_print(self, *args):
-        """
-        A fake L{print} that records its arguments.
-        """
-        self.print_calls.append(args)
-
-    def fake_exit(self, code):
-        """
-        A fake L{sys.exit} that records its arguments.
-        """
-        self.exit_calls.append(code)
-        raise _SystemExit
-
     def fake_getpass(self, prompt):
         """
         A fake L{getpass.getpass} that records its arguments.
@@ -249,17 +198,18 @@ class RunTests(SynchronousTestCase):
 
     def test_run_usage_error(self):
         """
-        A usage error results in a help message and an exit code of 1
+        A usage error results in a help message and an exit code of 1.
         """
         errortext = "error text"
         first_line = ': '.join([self.argv0, errortext])
 
-        self.recorder.parseOptions_raises = usage.UsageError(errortext)
+        self.options_recorder.parseOptions_raises = usage.UsageError(errortext)
 
         self.assertRaises(_SystemExit,
                           self.run, "reactor", self.argv0, "bad args")
 
-        self.assertEqual(self.recorder.parseOptions_calls, [("bad args",)])
+        self.assertEqual(self.options_recorder.parseOptions_calls,
+                         [("bad args",)])
 
         self.assertEqual(len(self.print_calls), 2)
         self.assertEqual(self.print_calls[0], (first_line,))
@@ -281,7 +231,8 @@ class RunTests(SynchronousTestCase):
 
         result = self.run(reactor, self.argv0, "good args")
 
-        self.assertEqual(self.recorder.parseOptions_calls, [("good args",)])
+        self.assertEqual(self.options_recorder.parseOptions_calls,
+                         [("good args",)])
         self.assertEqual(len(self.getpass_calls), 1)
 
         self.assertIs(self.options["password"], self.getpass_returns)

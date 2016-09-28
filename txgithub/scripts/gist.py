@@ -40,13 +40,20 @@ def postGist(reactor, token, files,
     _print(response['html_url'])
 
 
-def run(reactor, *argv):
-    config = Options()
-    try:
-        config.parseOptions(argv[1:]) # When given no argument, parses sys.argv[1:]
-    except usage.UsageError, errortext:
-        print('%s: %s' % (argv[0], errortext))
-        print('%s: Try --help for usage details.' % (argv[0]))
-        sys.exit(1)
+def _makeRun(_optionsFactory=Options,
+             _print=print,
+             _exit=sys.exit,
+             _postGist=postGist):
+    def run(reactor, *argv):
+        config = _optionsFactory()
+        try:
+            config.parseOptions(argv[1:]) # When given no argument, parses sys.argv[1:]
+        except usage.UsageError, errortext:
+            _print('%s: %s' % (argv[0], errortext))
+            _print('%s: Try --help for usage details.' % (argv[0]))
+            _exit(1)
 
-    return postGist(reactor, **config)
+        return _postGist(reactor, **config)
+    return run
+
+run = _makeRun()

@@ -9,22 +9,27 @@ from twisted.internet.defer import Deferred, succeed
 
 from txgithub.scripts import gist
 
+from . _options import (_OptionsTestCaseMixin,
+                        _FakeOptionsTestCaseMixin,
+                        _FakePrintTestCaseMixin,
+                        _FakeSystemExitTestCaseMixin,
+                        _SystemExit)
 
-class OptionsTestCase(SynchronousTestCase):
+
+class OptionsTestCase(_OptionsTestCaseMixin):
     """
     Tests for L{gist.Options}
     """
-
-    def setUp(self):
-        self.files = ["files"]
-        self.config = gist.Options()
+    files = ('files',)
+    required_args = files
+    options_factory = gist.Options
 
     def test_single_file_ok(self):
         """
         Files is an argument.
         """
         self.config.parseOptions(self.files)
-        self.assertEqual(self.config['files'], tuple(self.files))
+        self.assertEqual(self.config['files'], self.files)
 
     def test_files_ok(self):
         """
@@ -32,15 +37,6 @@ class OptionsTestCase(SynchronousTestCase):
         """
         self.config.parseOptions(["file1", "file2"])
         self.assertEqual(self.config['files'], ("file1", "file2"))
-
-    def assert_option(self, option_inputs, option_name, expected_value):
-        """
-        Assert that the input C{option_inputs} is parsed into
-        C{expected_value} and available in C{self.config} under
-        C{option_name}.
-        """
-        self.config.parseOptions(option_inputs + self.files)
-        self.assertEqual(self.config[option_name], expected_value)
 
     def test_token_ok(self):
         """
@@ -228,3 +224,80 @@ class PostGistTests(SynchronousTestCase):
         self.successResultOf(response)
 
         self.assertEqual(self.print_calls, [(url,)])
+
+
+_PostGistCall = namedtuple("_PostGistCall",
+                           ["reactor", "token", "files"])
+
+
+class RunTests(_FakeOptionsTestCaseMixin,
+               _FakeSystemExitTestCaseMixin,
+               _FakePrintTestCaseMixin):
+    """
+    Tests for L{txgithub.scripts.gist.run}
+    """
+
+    def setUp(self):
+        super(RunTests, self).setUp()
+        self.postGist_calls = []
+        self.postGist_returns = "postGist return value"
+
+        self.run = gist._makeRun(_optionsFactory=lambda: self.options,
+                                 _print=self.fake_print,
+                                 _exit=self.fake_exit,
+                                 _postGist=self.fake_postGist)
+
+    def fake_postGist(self, reactor, token, files):
+        """
+        A fake L{gist.postGist} implementation that records its calls.
+        """
+        self.postGist_calls.append(_PostGistCall(reactor, token, files))
+        return self.postGist_returns
+
+    def test_run_usage_error(self):
+        """
+        A usage error results in a help message and an exit code of 1.
+        """
+
+        errortext = "error text"
+        first_line = ': '.join([self.argv0, errortext])
+
+        self.options_recorder.parseOptions_raises = usage.UsageError(errortext)
+
+        self.assertRaises(_SystemExit,
+                          self.run, "reactor", self.argv0, "bad args")
+
+        self.assertEqual(self.options_recorder.parseOptions_calls,
+                         [("bad args",)])
+
+        self.assertEqual(len(self.print_calls), 2)
+        self.assertEqual(self.print_calls[0], (first_line,))
+        self.assertIn("--help", self.print_calls[1][0])
+
+        self.assertEqual(len(self.exit_calls), 1)
+        [code] = self.exit_calls
+        self.assertEqual(code, 1)
+
+        self.assertNot(self.postGist_calls)
+
+    def test_run_ok(self):
+        """
+        The post gist implementation is called with the options
+        specified on the command line.
+        """
+        reactor = "reactor"
+        self.options["token"] = "the token"
+        self.options["files"] = ("file1",)
+
+        result = self.run(reactor, self.argv0, "good args")
+
+        self.assertEqual(self.options_recorder.parseOptions_calls,
+                         [("good args",)])
+
+        self.assertEqual(len(self.postGist_calls), 1)
+        [call] = self.postGist_calls
+        self.assertIs(call.reactor, reactor)
+        self.assertEqual(call.token, self.options["token"])
+        self.assertEqual(call.files, self.options["files"])
+
+        self.assertIs(result, self.postGist_returns)
