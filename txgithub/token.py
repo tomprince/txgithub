@@ -9,7 +9,8 @@ from txgithub.constants import HOSTED_BASE_URL
 
 def createToken(username, password,
                 note, note_url,
-                scopes, baseURL=None):
+                scopes, baseURL=None,
+                _getPage=client.getPage):
     baseURL = baseURL or HOSTED_BASE_URL
     if baseURL[-1] != '/':
         baseURL += '/'
@@ -23,7 +24,7 @@ def createToken(username, password,
         note_url = note_url,
         scopes = scopes,
         ))
-    d = client.getPage(
+    d = _getPage(
             url='%sauthorizations' % baseURL,
             method='POST',
             postdata=postData,
@@ -36,7 +37,7 @@ def createToken(username, password,
     return d
 
 
-def getToken():
-    d = utils.getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
+def getToken(_getProcessOutput=utils.getProcessOutput):
+    d = _getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
     d.addCallback(str.strip)
     return d
