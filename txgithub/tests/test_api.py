@@ -111,7 +111,7 @@ class GithubApiTest(_GithubApiTestCase):
         An empty OAuth token is not allowed.
         """
         with self.assertRaises(AssertionError):
-            GitHubAPI(b"")._makeHeaders()
+            GitHubAPI("")._makeHeaders()
 
     def test_makeHeaders(self):
         """
@@ -233,7 +233,7 @@ class GithubApiMakeRequestTests(_GithubApiTestCase):
         factory = self.factory_from_makeRequest([])
         factory.response_headers = headers
 
-        factory.page(b"")
+        factory.page("")
         self.complete_response(factory)
         self.assertIs(self.api.last_response_headers, headers)
 
@@ -248,7 +248,7 @@ class GithubApiMakeRequestTests(_GithubApiTestCase):
         # clear other logged events
         del self.log_events[:]
 
-        factory.page(b"")
+        factory.page("")
         self.complete_response(factory)
 
         self.assertTrue(self.api.rateLimitWarningIssued)
@@ -268,7 +268,7 @@ class GithubApiMakeRequestTests(_GithubApiTestCase):
         # clear other logged events
         del self.log_events[:]
 
-        factory.page(b"")
+        factory.page("")
         self.complete_response(factory)
 
         self.assertFalse(self.api.rateLimitWarningIssued)
