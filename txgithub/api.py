@@ -40,14 +40,14 @@ class GithubApi(object):
     # - optional user/pass auth (token is not available with v3)
     # - async API
 
-    def __init__(self, oauth2_token, baseURL=None, _reactor=None):
+    def __init__(self, oauth2_token, baseURL=None, reactor=None):
         self._baseURL = baseURL or HOSTED_BASE_URL
         self.oauth2_token = oauth2_token
         self.rateLimitWarningIssued = False
         self.contextFactory = ssl.ClientContextFactory()
-        if _reactor is None:
-            from twisted.internet import reactor as _reactor
-        self.reactor = _reactor
+        if reactor is None:
+            from twisted.internet import reactor
+        self.reactor = reactor
 
     def _makeHeaders(self):
         assert self.oauth2_token, "no token specified"

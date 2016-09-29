@@ -1,6 +1,7 @@
 """
 Tests for L{txgithub.scripts.create_token}
 """
+from __future__ import print_function
 from collections import namedtuple
 from twisted.python import usage
 from twisted.trial.unittest import SynchronousTestCase
@@ -117,6 +118,9 @@ class CreateTokenTests(SynchronousTestCase):
         self.url = "note url"
         self.scopes = "scopes"
 
+        self.patch(create_token.token, "createToken", self.fake_createToken)
+        self.patch(create_token, "_print", self.fake_print)
+
     def fake_print(self, *args):
         """
         A fake L{print} that records its arguments.
@@ -142,9 +146,7 @@ class CreateTokenTests(SynchronousTestCase):
             self.password,
             self.note,
             self.url,
-            self.scopes,
-            _createToken=self.fake_createToken,
-            _print=self.fake_print)
+            self.scopes)
 
         self.assertEqual(len(self.createToken_calls), 1)
         [call] = self.createToken_calls
@@ -175,11 +177,11 @@ class RunTests(_FakeOptionsTestCaseMixin,
         self.getpass_calls = []
         self.getpass_returns = None
 
-        self.run = create_token._makeRun(_optionsFactory=lambda: self.options,
-                                         _createToken=self.fake_createToken,
-                                         _print=self.fake_print,
-                                         _exit=self.fake_exit,
-                                         _getpass=self.fake_getpass)
+        self.patch(create_token, "Options", lambda: self.options)
+        self.patch(create_token, "createToken", self.fake_createToken)
+        self.patch(create_token, "_print", self.fake_print)
+        self.patch(create_token, "exit", self.fake_exit)
+        self.patch(create_token, "getpass", self.fake_getpass)
 
     def fake_createToken(self, reactor, **kwargs):
         """
@@ -206,7 +208,7 @@ class RunTests(_FakeOptionsTestCaseMixin,
         self.options_recorder.parseOptions_raises = usage.UsageError(errortext)
 
         self.assertRaises(_SystemExit,
-                          self.run, "reactor", self.argv0, "bad args")
+                          create_token.run, "reactor", self.argv0, "bad args")
 
         self.assertEqual(self.options_recorder.parseOptions_calls,
                          [("bad args",)])
@@ -229,7 +231,7 @@ class RunTests(_FakeOptionsTestCaseMixin,
         reactor = "reactor"
         self.getpass_returns = "password"
 
-        result = self.run(reactor, self.argv0, "good args")
+        result = create_token.run(reactor, self.argv0, "good args")
 
         self.assertEqual(self.options_recorder.parseOptions_calls,
                          [("good args",)])

@@ -84,7 +84,7 @@ class _GithubApiTestCase(SynchronousTestCase):
 
         self.api = GitHubAPI(self.oauth_token,
                              baseURL=self.base_url,
-                             _reactor=self.reactor)
+                             reactor=self.reactor)
 
 
 class GithubApiTest(_GithubApiTestCase):
@@ -97,7 +97,7 @@ class GithubApiTest(_GithubApiTestCase):
         A default URL is used if none is specified.
         """
         api = GitHubAPI(self.oauth_token,
-                        _reactor=self.reactor)
+                        reactor=self.reactor)
         self.assertEqual(api._baseURL, HOSTED_BASE_URL)
 
     def test_specified_url(self):

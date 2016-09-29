@@ -1,10 +1,14 @@
 from __future__ import print_function
 
-import getpass
-import sys
+from getpass import getpass
+from sys import exit
 from twisted.python import usage
 
 from txgithub import token
+
+__all__ = ["Options", "createToken", "run"]
+
+_print = print
 
 
 class Options(usage.Options):
@@ -26,10 +30,8 @@ class Options(usage.Options):
         self['username'] = username
 
 
-def createToken(reactor, username, password, note, url, scopes,
-                _createToken=token.createToken,
-                _print=print):
-    d = _createToken(
+def createToken(reactor, username, password, note, url, scopes):
+    d = token.createToken(
         username, password,
         note=note, note_url=url,
         scopes=scopes)
@@ -37,23 +39,15 @@ def createToken(reactor, username, password, note, url, scopes,
     return d
 
 
-def _makeRun(_optionsFactory=Options,
-             _createToken=createToken,
-             _print=print,
-             _exit=sys.exit,
-             _getpass=getpass.getpass):
-    def run(reactor, *argv):
-        config = _optionsFactory()
-        try:
-            config.parseOptions(argv[1:]) # When given no argument, parses sys.argv[1:]
-        except usage.UsageError, errortext:
-            _print('%s: %s' % (argv[0], errortext))
-            _print('%s: Try --help for usage details.' % (argv[0]))
-            _exit(1)
+def run(reactor, *argv):
+    config = Options()
+    try:
+        config.parseOptions(argv[1:]) # When given no argument, parses sys.argv[1:]
+    except usage.UsageError, errortext:
+        _print('%s: %s' % (argv[0], errortext))
+        _print('%s: Try --help for usage details.' % (argv[0]))
+        exit(1)
 
-        config['password'] = _getpass("github password: ")
+    config['password'] = getpass("github password: ")
 
-        return _createToken(reactor, **config)
-    return run
-
-run = _makeRun()
+    return createToken(reactor, **config)

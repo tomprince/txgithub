@@ -115,7 +115,7 @@ class PostGistTests(SynchronousTestCase):
         self.gists = FakeGistsEndpoint(self.gists_recorder)
 
         self.api_recorder = RecordsFakeGithubAPI()
-        self.api = FakeGithubAPI(self.api_recorder, self.gists)
+        self.fake_api = FakeGithubAPI(self.api_recorder, self.gists)
 
         self.content = u"content"
 
@@ -126,16 +126,11 @@ class PostGistTests(SynchronousTestCase):
 
         self.print_calls = []
 
-    def postGist(self, reactor, token, files):
-        """
-        A L{gist.postGist} wrapper that installs fakes.
-        """
-        return gist.postGist(reactor, token, files,
-                             _getToken=self.fake_getToken,
-                             _githubAPIFactory=self.api._init,
-                             _open=self.fake_open,
-                             _stdin=self.stdin,
-                             _print=self.fake_print)
+        self.patch(gist, "getToken", self.fake_getToken)
+        self.patch(gist, "GithubApi", self.fake_api._init)
+        self.patch(gist, "_open", self.fake_open)
+        self.patch(gist, "stdin", self.stdin)
+        self.patch(gist, "_print", self.fake_print)
 
     def fake_getToken(self):
         """
@@ -143,7 +138,6 @@ class PostGistTests(SynchronousTestCase):
         """
         self.getToken_call_count += 1
         return self.getToken_returns
-
 
     def fake_open(self, filename):
         """
@@ -163,7 +157,7 @@ class PostGistTests(SynchronousTestCase):
         When no token is provided, the get token implementation is
         called to retrieve one.
         """
-        self.postGist("reactor", token="", files=["something"])
+        gist.postGist("reactor", token="", files=["something"])
         self.assertEqual(self.getToken_call_count, 1)
         self.assertEqual(self.api_recorder.init_calls, [self.token])
 
@@ -172,7 +166,7 @@ class PostGistTests(SynchronousTestCase):
         The provided token is used to connect to GitHub.
         """
         token = "my token"
-        self.postGist("reactor", token=token, files=["something"])
+        gist.postGist("reactor", token=token, files=["something"])
         self.assertEqual(self.getToken_call_count, 0)
         self.assertEqual(self.api_recorder.init_calls, [token])
 
@@ -180,7 +174,7 @@ class PostGistTests(SynchronousTestCase):
         """
         When no files are provided, the gist is read from stdin.
         """
-        self.postGist("reactor", token=self.token, files=())
+        gist.postGist("reactor", token=self.token, files=())
         self.assertEqual(self.gists_recorder.create_calls, [
             {
                 "gistfile1": {
@@ -196,7 +190,7 @@ class PostGistTests(SynchronousTestCase):
         """
         filename = "some file"
 
-        self.postGist("reactor", token=self.token, files=[filename])
+        gist.postGist("reactor", token=self.token, files=[filename])
 
         self.assertEqual(self.open_calls, [filename])
         self.assertTrue(self.open_returns.closed)
@@ -214,7 +208,7 @@ class PostGistTests(SynchronousTestCase):
         The URL in the API's response is printed.
         """
         url = "https://something"
-        response = self.postGist("reactor", token=self.token, files=[])
+        response = gist.postGist("reactor", token=self.token, files=[])
 
         self.gists_recorder.create_returns.callback(
             {
@@ -242,10 +236,10 @@ class RunTests(_FakeOptionsTestCaseMixin,
         self.postGist_calls = []
         self.postGist_returns = "postGist return value"
 
-        self.run = gist._makeRun(_optionsFactory=lambda: self.options,
-                                 _print=self.fake_print,
-                                 _exit=self.fake_exit,
-                                 _postGist=self.fake_postGist)
+        self.patch(gist, "Options", lambda: self.options)
+        self.patch(gist, "_print", self.fake_print)
+        self.patch(gist, "exit", self.fake_exit)
+        self.patch(gist, "postGist", self.fake_postGist)
 
     def fake_postGist(self, reactor, token, files):
         """
@@ -265,7 +259,7 @@ class RunTests(_FakeOptionsTestCaseMixin,
         self.options_recorder.parseOptions_raises = usage.UsageError(errortext)
 
         self.assertRaises(_SystemExit,
-                          self.run, "reactor", self.argv0, "bad args")
+                          gist.run, "reactor", self.argv0, "bad args")
 
         self.assertEqual(self.options_recorder.parseOptions_calls,
                          [("bad args",)])
@@ -289,7 +283,7 @@ class RunTests(_FakeOptionsTestCaseMixin,
         self.options["token"] = "the token"
         self.options["files"] = ("file1",)
 
-        result = self.run(reactor, self.argv0, "good args")
+        result = gist.run(reactor, self.argv0, "good args")
 
         self.assertEqual(self.options_recorder.parseOptions_calls,
                          [("good args",)])
