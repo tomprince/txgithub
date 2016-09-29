@@ -3,7 +3,7 @@ import json
 import base64
 
 from twisted.web import client
-from twisted.internet import utils
+from twisted.internet.utils import getProcessOutput
 
 from txgithub.constants import HOSTED_BASE_URL
 
@@ -37,7 +37,7 @@ def createToken(username, password,
     return d
 
 
-def getToken(_getProcessOutput=utils.getProcessOutput):
-    d = _getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
+def getToken():
+    d = getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
     d.addCallback(str.strip)
     return d

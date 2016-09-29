@@ -9,7 +9,7 @@ from twisted.internet.defer import Deferred
 from twisted.trial.unittest import SynchronousTestCase
 
 from txgithub.constants import HOSTED_BASE_URL
-from txgithub.token import createToken, getToken
+from txgithub import token
 
 
 _GetPageCalls = namedtuple("_GetPageCalls",
@@ -67,12 +67,12 @@ class TestGithubPageGetter(SynchronousTestCase):
         kwargs = {"_getPage": self.fake_getPage}
         if baseURL:
             kwargs["baseURL"] = baseURL
-        return createToken(self.user,
-                           self.password,
-                           self.note,
-                           self.note_url,
-                           self.scopes,
-                           **kwargs)
+        return token.createToken(self.user,
+                                 self.password,
+                                 self.note,
+                                 self.note_url,
+                                 self.scopes,
+                                 **kwargs)
 
     def test_createToken_default_url(self):
         """
@@ -139,6 +139,7 @@ class GetTokenTests(SynchronousTestCase):
     def setUp(self):
         self.getProcessOutput_calls = []
         self.getProcessOutput_deferred = Deferred()
+        self.patch(token, "getProcessOutput", self.fake_getProcessOutput)
 
     def fake_getProcessOutput(self, executable, args, env):
         """
@@ -152,11 +153,11 @@ class GetTokenTests(SynchronousTestCase):
         """
         The GitHub API token is retrieved from the local git repository.
         """
-        token = getToken(_getProcessOutput=self.fake_getProcessOutput)
+        token_deferred = token.getToken()
 
         self.assertEqual(
             self.getProcessOutput_calls,
             [('git', ('config', '--get', 'github.token'), os.environ)])
 
-        token.callback("some token\n")
-        self.assertEqual(self.successResultOf(token), "some token")
+        token_deferred.callback("some token\n")
+        self.assertEqual(self.successResultOf(token_deferred), "some token")
