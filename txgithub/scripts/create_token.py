@@ -1,7 +1,15 @@
 from __future__ import print_function
 
-import sys
+from getpass import getpass
+from sys import exit
 from twisted.python import usage
+
+from txgithub import token
+
+__all__ = ["Options", "createToken", "run"]
+
+_print = print
+
 
 class Options(usage.Options):
     optParameters = [["note", "n", "txgithub", "token note"],
@@ -21,25 +29,25 @@ class Options(usage.Options):
     def parseArgs(self, username):
         self['username'] = username
 
+
 def createToken(reactor, username, password, note, url, scopes):
-    from txgithub import token
-    d = token.createToken(username, password,
-            note=note, note_url=url,
-            scopes = scopes
-            )
-    d.addCallback(print)
+    d = token.createToken(
+        username, password,
+        note=note, note_url=url,
+        scopes=scopes)
+    d.addCallback(_print)
     return d
+
 
 def run(reactor, *argv):
     config = Options()
     try:
         config.parseOptions(argv[1:]) # When given no argument, parses sys.argv[1:]
     except usage.UsageError, errortext:
-        print('%s: %s' % (argv[0], errortext))
-        print('%s: Try --help for usage details.' % (argv[0]))
-        sys.exit(1)
+        _print('%s: %s' % (argv[0], errortext))
+        _print('%s: Try --help for usage details.' % (argv[0]))
+        exit(1)
 
-    import getpass
-    config['password'] = getpass.getpass("github password: ")
+    config['password'] = getpass("github password: ")
 
     return createToken(reactor, **config)

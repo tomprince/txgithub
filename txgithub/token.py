@@ -3,13 +3,14 @@ import json
 import base64
 
 from twisted.web import client
-from twisted.internet import utils
+from twisted.internet.utils import getProcessOutput
 
 from txgithub.constants import HOSTED_BASE_URL
 
 def createToken(username, password,
                 note, note_url,
-                scopes, baseURL=None):
+                scopes, baseURL=None,
+                _getPage=client.getPage):
     baseURL = baseURL or HOSTED_BASE_URL
     if baseURL[-1] != '/':
         baseURL += '/'
@@ -23,7 +24,7 @@ def createToken(username, password,
         note_url = note_url,
         scopes = scopes,
         ))
-    d = client.getPage(
+    d = _getPage(
             url='%sauthorizations' % baseURL,
             method='POST',
             postdata=postData,
@@ -37,6 +38,6 @@ def createToken(username, password,
 
 
 def getToken():
-    d = utils.getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
+    d = getProcessOutput('git', ('config', '--get', 'github.token'), env=os.environ)
     d.addCallback(str.strip)
     return d
