@@ -794,6 +794,12 @@ class TestReviewCommentsEndpoint(_EndpointTestCase):
         super(TestReviewCommentsEndpoint, self).setUp()
         self.reviews = self.github.reviews
 
+    def test_same_repos_object(self):
+        """
+        The L{ReposEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.reviews, self.reviews)
+
     def test_getRepoComments(self):
         """
         All review comments for a repo are retrieved.
