@@ -390,10 +390,10 @@ class ReviewCommentsEndpoint(BaseEndpoint):
             ["repos", repo_user, repo_name,
              "pulls", str(pull_number), "comments"],
             method="POST",
-            data={"body": body,
-                  "commit_id": commit_id,
-                  "path": path,
-                  "position": position})
+            data=dict(body=body,
+                      commit_id=commit_id,
+                      path=path,
+                      position=position))
 
     def replyToComment(self, repo_user, repo_name, pull_number,
                        body, in_reply_to):
@@ -409,8 +409,8 @@ class ReviewCommentsEndpoint(BaseEndpoint):
             ["repos", repo_user, repo_name,
              "pulls", str(pull_number), "comments"],
             method="POST",
-            data={"body": body,
-                  "in_reply_to": in_reply_to})
+            data=dict(body=body,
+                      in_reply_to=in_reply_to))
 
     def editComment(self, repo_user, repo_name, comment_id, body):
         """
@@ -423,7 +423,7 @@ class ReviewCommentsEndpoint(BaseEndpoint):
             ["repos", repo_user, repo_name,
              "pulls", "comments", str(comment_id)],
             method="POST",
-            data={"body": body})
+            data=dict(body=body))
 
     def deleteComment(self, repo_user, repo_name, comment_id):
         """
