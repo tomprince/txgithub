@@ -784,3 +784,155 @@ class TestIssueCommentsEndpoint(_EndpointTestCase):
         self.assertRequestEqual(self._github_requests[0],
                                 method='POST',
                                 post={'body': 'some body'})
+
+
+class TestReviewCommentsEndpoint(_EndpointTestCase):
+    """
+    Unit tests for ReviewCommentsEndpoint.
+    """
+    def setUp(self):
+        super(TestReviewCommentsEndpoint, self).setUp()
+        self.reviews = self.github.reviews
+
+    def test_same_repos_object(self):
+        """
+        The L{ReposEndpoint} is lazily created once.
+        """
+        self.assertIs(self.github.reviews, self.reviews)
+
+    def test_getRepoComments(self):
+        """
+        All review comments for a repo are retrieved.
+        """
+        makeRequestAllPages_returns = "makeRequestAllPages"
+        calls = []
+
+        def fake_makeRequestAllPages(path):
+            calls.append(path)
+            return makeRequestAllPages_returns
+
+        self.github.makeRequestAllPages = fake_makeRequestAllPages
+
+        self.assertIs(self.reviews.getRepoComments("user", "name"),
+                      makeRequestAllPages_returns)
+        self.assertEqual(
+            calls, [["repos", "user", "name", "pulls", "comments"]])
+
+    def test_getPullRequestComments(self):
+        """
+        All comments for a pull request are retrieved.
+        """
+        makeRequestAllPages_returns = "makeRequestAllPages"
+        calls = []
+
+        def fake_makeRequestAllPages(path):
+            calls.append(path)
+            return makeRequestAllPages_returns
+
+        self.github.makeRequestAllPages = fake_makeRequestAllPages
+
+        self.assertIs(self.reviews.getPullRequestComments("user", "name", 123),
+                      makeRequestAllPages_returns)
+        self.assertEqual(
+            calls, [["repos", "user", "name", "pulls", "123", "comments"]])
+
+    def test_getComment(self):
+        """
+        The specified comment is retrieved.
+        """
+        self._github_responses = [{"comment": "body"}]
+        d = self.reviews.getComment("repo", "name", 123)
+
+        result = self.successResultOf(d)
+
+        self.assertEqual({"comment": "body"}, result)
+        request = self._github_requests[0]
+        self.assertEqual(
+            ['repos', 'repo', 'name', 'pulls', 'comments', '123'],
+            request['args'][0])
+
+    def test_createComment(self):
+        """
+        A review comment is created according to the specification.
+        """
+        self._github_responses = [{"comment": "body"}]
+        d = self.reviews.createComment(
+            "repo", "name",
+            pull_number=123,
+            body="Nice change",
+            commit_id="6dcb09b5b57875f334f61aebed695e2e4193db5e",
+            path="file1.txt",
+            position=4)
+
+        result = self.successResultOf(d)
+
+        self.assertEqual({"comment": "body"}, result)
+        request = self._github_requests[0]
+        self.assertEqual(request['args'][0],
+                         ['repos', 'repo', 'name', 'pulls', '123', "comments"])
+        self.assertEqual("POST", request["kwargs"]["method"])
+        self.assertEqual({
+            "body": "Nice change",
+            "commit_id": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+            "path": "file1.txt",
+            "position": 4
+        }, request["kwargs"]["data"])
+
+    def test_replyToComment(self):
+        """
+        A reply to the specified comment is created.
+        """
+        self._github_responses = [{"comment": "body"}]
+        d = self.reviews.replyToComment(
+            "repo", "name",
+            pull_number=123,
+            body="Nice change",
+            in_reply_to=4)
+
+        result = self.successResultOf(d)
+
+        self.assertEqual({"comment": "body"}, result)
+        request = self._github_requests[0]
+        self.assertEqual(request['args'][0],
+                         ['repos', 'repo', 'name', 'pulls', '123', "comments"])
+        self.assertEqual("POST", request["kwargs"]["method"])
+        self.assertEqual({
+            "body": "Nice change",
+            "in_reply_to": 4,
+        }, request["kwargs"]["data"])
+
+    def test_editComment(self):
+        """
+        The specified comment is edited.
+        """
+        self._github_responses = [{"comment": "body"}]
+        d = self.reviews.editComment(
+            "repo", "name",
+            comment_id=123,
+            body="Nice change")
+
+        result = self.successResultOf(d)
+
+        self.assertEqual({"comment": "body"}, result)
+        request = self._github_requests[0]
+        self.assertEqual(request['args'][0],
+                         ['repos', 'repo', 'name', 'pulls', "comments", "123"])
+        self.assertEqual("POST", request["kwargs"]["method"])
+        self.assertEqual({"body": "Nice change"}, request["kwargs"]["data"])
+
+    def test_deleteComment(self):
+        """
+        The specified comment is deleted.
+        """
+        self._github_responses = [None]
+        d = self.reviews.deleteComment(
+            "repo", "name",
+            comment_id=123)
+
+        result = self.successResultOf(d)
+
+        self.assertEqual(None, result)
+        request = self._github_requests[0]
+        self.assertEqual(request['args'][0],
+                         ['repos', 'repo', 'name', 'pulls', "comments", "123"])
+        self.assertEqual("DELETE", request["kwargs"]["method"])

@@ -137,6 +137,13 @@ class GithubApi(object):
             self._comments = IssueCommentsEndpoint(self)
         return self._comments
 
+    _reviews = None
+    @property
+    def reviews(self):
+        if not self._reviews:
+            self._reviews = ReviewCommentsEndpoint(self)
+        return self._reviews
+
 
 class BaseEndpoint(object):
 
@@ -338,3 +345,94 @@ class IssueCommentsEndpoint(BaseEndpoint):
              'issues', issue_number, 'comments'],
             method='POST',
             post=dict(body=body))
+
+
+class ReviewCommentsEndpoint(BaseEndpoint):
+    def getRepoComments(self, repo_user, repo_name):
+        """
+        GET /repos/:owner/:repo/pulls/comments
+        """
+        return self.api.makeRequestAllPages(
+            ['repos', repo_user, repo_name, 'pulls', 'comments'])
+
+    def getPullRequestComments(self, repo_user, repo_name, pull_number):
+        """
+        GET /repos/:owner/:repo/pulls/:number/comments
+
+        :param pull_number: The pull request's number.
+        """
+        return self.api.makeRequestAllPages(
+            ['repos', repo_user, repo_name,
+             'pulls', str(pull_number), 'comments'])
+
+    def getComment(self, repo_user, repo_name, comment_id):
+        """
+        GET /repos/:owner/:repo/pull/comments/:number
+
+        :param comment_id: The review comment's ID.
+        """
+        return self.api.makeRequest(
+            ['repos', repo_user, repo_name,
+             'pulls', 'comments', str(comment_id)])
+
+    def createComment(self, repo_user, repo_name, pull_number,
+                      body, commit_id, path, position):
+        """
+        POST /repos/:owner/:repo/pulls/:number/comments
+
+        :param pull_number: The pull request's ID.
+        :param body: The text of the comment.
+        :param commit_id: The SHA of the commit to comment on.
+        :param path: The relative path of the file to comment on.
+        :param position: The line index in the diff to comment on.
+        """
+        return self.api.makeRequest(
+            ["repos", repo_user, repo_name,
+             "pulls", str(pull_number), "comments"],
+            method="POST",
+            data=dict(body=body,
+                      commit_id=commit_id,
+                      path=path,
+                      position=position))
+
+    def replyToComment(self, repo_user, repo_name, pull_number,
+                       body, in_reply_to):
+        """
+        POST /repos/:owner/:repo/pulls/:number/comments
+
+        Like create, but reply to an existing comment.
+
+        :param body: The text of the comment.
+        :param in_reply_to: The comment ID to reply to.
+        """
+        return self.api.makeRequest(
+            ["repos", repo_user, repo_name,
+             "pulls", str(pull_number), "comments"],
+            method="POST",
+            data=dict(body=body,
+                      in_reply_to=in_reply_to))
+
+    def editComment(self, repo_user, repo_name, comment_id, body):
+        """
+        PATCH /repos/:owner/:repo/pulls/comments/:id
+
+        :param comment_id: The ID of the comment to edit
+        :param body: The new body of the comment.
+        """
+        return self.api.makeRequest(
+            ["repos", repo_user, repo_name,
+             "pulls", "comments", str(comment_id)],
+            method="POST",
+            data=dict(body=body))
+
+    def deleteComment(self, repo_user, repo_name, comment_id):
+        """
+        DELETE /repos/:owner/:repo/pulls/comments/:id
+
+        :param comment_id: The ID of the comment to edit
+        :param body: The new body of the comment.
+        """
+        return self.api.makeRequest(
+            ["repos", repo_user, repo_name,
+             "pulls", "comments", str(comment_id)],
+            method="DELETE")
